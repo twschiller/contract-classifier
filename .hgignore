@@ -1,0 +1,8 @@
+syntax:glob
+
+RoslynContractCounter\RoslynContractCounter\bin
+RoslynContractCounter\RoslynContractCounter\obj
+RoslynContractCounter\ContractCounterTests\obj
+RoslynContractCounter\ContractCounterTests\bin
+
+*.csproj.user
