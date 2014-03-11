@@ -267,6 +267,19 @@ namespace RoslynContractCounter
 
         return false;
       }
+      else if (expr is BinaryExpressionSyntax && expr.Kind == SyntaxKind.NotEqualsExpression)
+      {
+        var b = (BinaryExpressionSyntax)expr;
+
+        Func<ExpressionSyntax, ExpressionSyntax, bool> chk = (lhs, rhs) =>
+        {
+          var isSizeExpr = IsCollectionSizeExpr(lhs);
+          var isZero = rhs is LiteralExpressionSyntax && rhs.ToString() == "0";
+          return isSizeExpr && isZero;
+        };
+
+        return chk(b.Left, b.Right) || chk(b.Right, b.Left);
+      }
       else
       {
         return false;
@@ -355,12 +368,12 @@ namespace RoslynContractCounter
         // Check for Count, Length, VertexCount (from QuickGraph)
         var mae = (MemberAccessExpressionSyntax)expr;
         return new string[] { "Count", "Length", "VertexCount" }.Any(m => mae.Name.ToString().Equals(m));
-
       }
       else if (expr is InvocationExpressionSyntax)
       {
-        // Check for .GetLength(...)
-        return SimpleMethodName(((InvocationExpressionSyntax)expr)).Equals("GetLength");
+        // Check for .GetLength(...), .Count()
+        var call = SimpleMethodName(((InvocationExpressionSyntax)expr));
+        return new string[] { "Count", "GetLength" }.Any(m => call.Equals(m));
       }
       else
       {
@@ -556,6 +569,16 @@ namespace RoslynContractCounter
 
     public static bool IsResultDefinition(ExpressionSyntax expr)
     {
+      var methodRule = new Regex("^Contract.Result<.*?>\\(\\)$");
+
+      if (methodRule.IsMatch(expr.ToString()))
+      {
+        return true;
+      }
+      else if (expr is PrefixUnaryExpressionSyntax && expr.Kind == SyntaxKind.LogicalNotExpression)
+      {
+        return IsResultDefinition(((PrefixUnaryExpressionSyntax)expr).Operand);
+      }
       if (expr is BinaryExpressionSyntax && expr.Kind == SyntaxKind.EqualsExpression)
       {
         var b = (BinaryExpressionSyntax)expr;
@@ -564,8 +587,8 @@ namespace RoslynContractCounter
         {
           var ie = (InvocationExpressionSyntax)b.Left;
 
-          var rule = new Regex("^Contract.Result<.*?>()$");
-          return rule.IsMatch(ie.Expression.ToString().Trim());
+          var callRule = new Regex("^Contract.Result<.*?>");
+          return callRule.IsMatch(ie.Expression.ToString().Trim());
         }
         else
         {

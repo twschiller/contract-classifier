@@ -55,7 +55,9 @@ namespace ContractCounterTests
     public void Return_value_tests()
     {
       CheckContract("Contract.Ensures(Contract.Result<bool>() == x > 5);", ContractKind.Ensures, Categories.ReturnValue);
+      CheckContract("Contract.Ensures(Contract.Result<bool>());", ContractKind.Ensures, Categories.ReturnValue);
       CheckContract("Contract.Ensures(Contract.Result<Lab>() == null);", ContractKind.Ensures, Categories.ReturnValue);
+      CheckContract("Contract.Ensures(!Contract.Result<bool>());", ContractKind.Ensures, Categories.ReturnValue);
     }
  
     [TestMethod]
@@ -237,9 +239,10 @@ namespace ContractCounterTests
       CheckContract("Contract.Requires(collection.Any());", ContractKind.Requires, Categories.NonEmpty);
       CheckContract("Contract.Requires(list.Count > 0);", ContractKind.Requires, Categories.NonEmpty);
       CheckContract("Contract.Requires(array.Length > 0);", ContractKind.Requires, Categories.NonEmpty);
+      CheckContract("Contract.Requires(lhss.Count != 0);", ContractKind.Requires, Categories.NonEmpty);
+      CheckContract("Contract.Requires(firstLineup.Count() > 0);", ContractKind.Requires, Categories.NonEmpty);
     }
 
-    [TestMethod]
     public void Expression_comparison_tests()
     {
       CheckContract("Contract.Requires(x > y);", ContractKind.Requires, Categories.ExpressionComparison);
@@ -249,6 +252,7 @@ namespace ContractCounterTests
       CheckContract("Contract.Requires(x.Compare(y) <= 0);", ContractKind.Requires, Categories.ExpressionComparison);
       CheckContract("Contract.Requires(x.Compare(y) > 0);", ContractKind.Requires, Categories.ExpressionComparison);
       CheckContract("Contract.Requires(x.Compare(y) >= 0);", ContractKind.Requires, Categories.ExpressionComparison);
+      CheckContract("Contract.Requires(x.CompareTo(y) < 0);", ContractKind.Requires, Categories.ExpressionComparison);
 
       CheckContract("Contract.Ensures(Contract.Result<IPersistentObject>().GetType() == po.GetType());", ContractKind.Ensures, Categories.ExpressionComparison);
       CheckContract("Contract.Ensures(Contract.Result<decimal[,]>().GetLength(0) == matrix.GetLength(0));", ContractKind.Ensures, Categories.ExpressionComparison);
@@ -292,9 +296,13 @@ namespace ContractCounterTests
       CheckContract("Contract.Requires(this.Field == 5);", ContractKind.Requires, Categories.Constant);
       CheckContract("Contract.Requires(this.Field == \"Hello World\");", ContractKind.Requires, Categories.Constant);
       CheckContract("Contract.Requires(System.Threading.Thread.CurrentThread.ManagedThreadId == 1);", ContractKind.Requires, Categories.Constant);
-
+      
       // Checking that a value is null is considered a constant value for PRECONDITIONS
-      CheckContract("Contract.Requires(typedIdent.WhereExpr == null);", ContractKind.Requires, Categories.Constant);    
+      CheckContract("Contract.Requires(typedIdent.WhereExpr == null);", ContractKind.Requires, Categories.Constant);
+
+      // These fail, but occur a total of less than 10 times
+      // CheckContract("Element.Name.Equals(\"channel\", StringComparison.CurrentCultureIgnoreCase));", ContractKind.Requires, Categories.Constant);
+      // CheckContract("Contract.Requires(x.Equals(0));", ContractKind.Requires, Categories.Constant);
     }
 
     [TestMethod]
@@ -307,5 +315,6 @@ namespace ContractCounterTests
       
       Assert.AreEqual(0, req.Labels.Count, "Invalid requires contract should be skipped");
     }
+
   }
 }
