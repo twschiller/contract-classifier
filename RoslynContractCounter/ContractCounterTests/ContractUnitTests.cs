@@ -49,6 +49,9 @@ namespace ContractCounterTests
       CheckContract("Contract.Requires(x != null);", ContractKind.Requires, Categories.Nullness);
       CheckContract("Contract.Requires(Contract.ForAll(xs, x => x != null));", ContractKind.Requires, Categories.Nullness);
       CheckContract("Contract.Requires(!ReferenceEquals(elts, null));", ContractKind.Requires, Categories.Nullness);
+
+      // These fail, but don't impact the results
+      // !commonTree.Equals(null)
     }
   
     [TestMethod]
@@ -300,9 +303,10 @@ namespace ContractCounterTests
       // Checking that a value is null is considered a constant value for PRECONDITIONS
       CheckContract("Contract.Requires(typedIdent.WhereExpr == null);", ContractKind.Requires, Categories.Constant);
 
-      // These fail, but occur a total of less than 10 times
-      // CheckContract("Element.Name.Equals(\"channel\", StringComparison.CurrentCultureIgnoreCase));", ContractKind.Requires, Categories.Constant);
-      // CheckContract("Contract.Requires(x.Equals(0));", ContractKind.Requires, Categories.Constant);
+      // These fail, but don't impact the results
+      // Element.Name.Equals(\"channel\", StringComparison.CurrentCultureIgnoreCase)
+      // x.Equals(0)
+      // guid.GetVersion() == GuidVersion.DCESecurity
     }
 
     [TestMethod]
@@ -315,6 +319,5 @@ namespace ContractCounterTests
       
       Assert.AreEqual(0, req.Labels.Count, "Invalid requires contract should be skipped");
     }
-
   }
 }
