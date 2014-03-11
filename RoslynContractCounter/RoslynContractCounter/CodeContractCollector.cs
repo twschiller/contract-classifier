@@ -478,7 +478,25 @@ namespace RoslynContractCounter
       else if (expr is BinaryExpressionSyntax)
       {
         var bin = (BinaryExpressionSyntax)expr;
-        return (bin.Kind == SyntaxKind.NotEqualsExpression) && (bin.Left.ToString().Equals("\"\"") || bin.Right.ToString().Equals("\"\""));
+
+        // Check for str != ""
+        if ((bin.Kind == SyntaxKind.NotEqualsExpression) && (bin.Left.ToString().Equals("\"\"") || bin.Right.ToString().Equals("\"\"")))
+        {
+          return true;
+        }
+
+        // Check for string.IsNullOrEmpty == false
+        if (bin.Kind == SyntaxKind.EqualsExpression || bin.Kind == SyntaxKind.NotEqualsExpression)
+        {
+          Func<ExpressionSyntax, ExpressionSyntax, bool> isCheck = (lhs, rhs) =>
+          {
+            return lhs is InvocationExpressionSyntax && IsNonNullOrEmptyCheck(lhs) && rhs is LiteralExpressionSyntax;
+          };
+
+          return isCheck(bin.Left, bin.Right) || isCheck(bin.Right, bin.Left);
+        }
+
+        return false;
       }
       else if (expr is PrefixUnaryExpressionSyntax && expr.Kind == SyntaxKind.LogicalNotExpression)
       {

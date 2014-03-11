@@ -189,9 +189,11 @@ namespace ContractCounterTests
     [TestMethod]
     public void Null_blank_contract_tests()
     {
-      CheckContract("Contract.Requires(string.IsNullOrEmpty(x));", ContractKind.Requires, Categories.NullOrBlank);
-      CheckContract("Contract.Requires(string.IsNullOrWhiteSpace(x));", ContractKind.Requires, Categories.NullOrBlank);
+      CheckContract("Contract.Requires(!string.IsNullOrEmpty(x));", ContractKind.Requires, Categories.NullOrBlank);
+      CheckContract("Contract.Requires(!string.IsNullOrWhiteSpace(x));", ContractKind.Requires, Categories.NullOrBlank);
       CheckContract("Contract.Requires(str != \"\");", ContractKind.Requires, Categories.NullOrBlank);
+      CheckContract("Contract.Requires(string.IsNullOrEmpty(x) == false);", ContractKind.Requires, Categories.NullOrBlank);
+      CheckContract("Contract.Requires(false == string.IsNullOrEmpty(x));", ContractKind.Requires, Categories.NullOrBlank);
     }
 
     [TestMethod]
