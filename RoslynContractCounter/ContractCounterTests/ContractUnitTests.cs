@@ -19,7 +19,7 @@ namespace ContractCounterTests
 
       req.Visit(root);
 
-      Assert.IsTrue(req.Labels.Count == 1);
+      Assert.AreEqual(1, req.Labels.Count, "Expected a single top-level contract clause");
       
       var labels = req.Labels[0].Labels.ToList();
 
@@ -63,6 +63,8 @@ namespace ContractCounterTests
       // Getters
       CheckContract("Contract.Ensures(Contract.Result<MyObject>() == this.Property);", ContractKind.Ensures, Categories.GetterOrSetter);
       CheckContract("Contract.Ensures(Contract.Result<MyObject>() == Property);", ContractKind.Ensures, Categories.GetterOrSetter);
+      CheckContract("Contract.Ensures(Contract.Result<MyObject>().Equals(this.Property));", ContractKind.Ensures, Categories.GetterOrSetter);
+      CheckContract("Contract.Ensures(ReferenceEquals(Contract.Result<MyObject>(), this.Property));", ContractKind.Ensures, Categories.GetterOrSetter);
       
       // Setters
       CheckContract("Contract.Ensures(this.Property == arg);", ContractKind.Ensures, Categories.GetterOrSetter);
@@ -105,10 +107,30 @@ namespace ContractCounterTests
     }
 
     [TestMethod]
+    public void Top_level_clause_tests()
+    {
+      var root = Syntax.ParseExpression("Contract.Requires(x > 5 && y > 1);");
+      var req = new CodeContractCollector(ContractKind.Requires, Categories.SemanticCategories);
+
+      req.Visit(root);
+
+      Assert.AreEqual(2, req.Labels.Count(), "Expected categorization for both clauses");
+
+      Assert.AreEqual(1, req.Labels[0].Labels.Count(), "Expected first clause to have a single label");
+      Assert.AreEqual(1, req.Labels[1].Labels.Count(), "Expected second clause to have a single label");
+    }
+
+    [TestMethod]
     public void Bounds_check_tests()
     {
       CheckContract("Contract.Requires(idx < list.Count);", ContractKind.Requires, Categories.BoundsCheck);
       CheckContract("Contract.Requires(idx < array.Length);", ContractKind.Requires, Categories.BoundsCheck);
+    }
+
+    [TestMethod]
+    public void Combined_bounds_check()
+    {
+      CheckContract("Contract.Requires(idx >= 0 && idx < list.Count);", ContractKind.Requires, Categories.BoundsCheck);
     }
 
     [TestMethod]
@@ -155,6 +177,10 @@ namespace ContractCounterTests
       CheckContract("Contract.Requires(x > y);", ContractKind.Requires, Categories.ExpressionComparison);
       CheckContract("Contract.Requires(x.Equals(y));", ContractKind.Requires, Categories.ExpressionComparison);
       CheckContract("Contract.Requires(!x.Equals(y));", ContractKind.Requires, Categories.ExpressionComparison);
+      CheckContract("Contract.Requires(x.Compare(y) < 0);", ContractKind.Requires, Categories.ExpressionComparison);
+      CheckContract("Contract.Requires(x.Compare(y) <= 0);", ContractKind.Requires, Categories.ExpressionComparison);
+      CheckContract("Contract.Requires(x.Compare(y) > 0);", ContractKind.Requires, Categories.ExpressionComparison);
+      CheckContract("Contract.Requires(x.Compare(y) >= 0);", ContractKind.Requires, Categories.ExpressionComparison);
     }
 
     [TestMethod]
@@ -162,6 +188,9 @@ namespace ContractCounterTests
     {
       CheckContractIsOther("Contract.Requires(x.CustomFunctionCall(y));", ContractKind.Requires);
       CheckContractIsOther("Contract.Requires(MyClass.CustomFunctionCall(x,y));", ContractKind.Requires);
+      
+      // Closures are considered to be "other" contracts
+      CheckContractIsOther("Contract.Requires(Contract.Forall(xs, x => { return CustomMethod(x) ;} );", ContractKind.Requires); 
     }
 
     [TestMethod]
@@ -185,6 +214,17 @@ namespace ContractCounterTests
     {
       CheckContract("Contract.Requires(this.Field == 5);", ContractKind.Requires, Categories.Constant);
       CheckContract("Contract.Requires(this.Field == \"Hello World\");", ContractKind.Requires, Categories.Constant);
+    }
+
+    [TestMethod]
+    public void Invalid_contract_tests()
+    {
+      var root = Syntax.ParseExpression("Contract.Requires(false);");
+      var req = new CodeContractCollector(ContractKind.Requires, Categories.SemanticCategories);
+
+      req.Visit(root);
+      
+      Assert.AreEqual(0, req.Labels.Count, "Invalid requires contract should be skipped");
     }
   }
 }

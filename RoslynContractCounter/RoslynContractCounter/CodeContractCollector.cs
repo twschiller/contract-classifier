@@ -47,12 +47,6 @@ namespace RoslynContractCounter
       this.Labels = new List<ContractTags>();
     }
 
-    public static bool IsIndicatorMember(string ident)
-    {
-      if (ident.Equals("Exists")) return true;
-      return new string[] { "Is", "Can", "Has" }.Any(prefix => ident.StartsWith(prefix) && ident.Length > prefix.Length && char.IsUpper(ident[prefix.Length]));
-    }
-
     public static bool IsIndicator(ExpressionSyntax expr)
     {
       if (expr is IdentifierNameSyntax)
@@ -69,6 +63,11 @@ namespace RoslynContractCounter
       {
         var call = (InvocationExpressionSyntax)expr;
 
+        if (call.ToString().StartsWith("Contract.Result"))
+        {
+          return false;
+        }
+
         // Check for instance methods.
         if (call.ArgumentList.Arguments.Count == 0)
         {
@@ -78,7 +77,7 @@ namespace RoslynContractCounter
         {
           if (call.Expression is MemberAccessExpressionSyntax)
           {
-            // Check that the member owner appears to be a static class
+            // Check that the base member appears to be a static class. 
             // XXX: how can we prevent this from catching too much?
             return char.IsUpper(((MemberAccessExpressionSyntax)call.Expression).Expression.ToString()[0]);
           }
@@ -369,6 +368,8 @@ namespace RoslynContractCounter
       }
       else if (expr is BinaryExpressionSyntax && expr.Kind == SyntaxKind.LogicalAndExpression)
       {
+        // XXX This is dead code because the top-level conjuncts are split
+
         var b = (BinaryExpressionSyntax)expr;
         return IsGreaterThanCheck(b.Left, 0, false) && IsBoundsCheck(b.Right);
       }
@@ -433,7 +434,7 @@ namespace RoslynContractCounter
       }
       else
       {
-        throw new Exception();
+        throw new Exception(string.Format("Unexpected method invocation node: {0}", expr.ToString()));
       }
     }
 
@@ -584,7 +585,8 @@ namespace RoslynContractCounter
 
     public static bool IsComparisonCheck(ExpressionSyntax expr)
     {
-      if (expr.Kind == SyntaxKind.LessThanExpression || expr.Kind == SyntaxKind.LessThanOrEqualExpression)
+      if (expr.Kind == SyntaxKind.LessThanExpression || expr.Kind == SyntaxKind.LessThanOrEqualExpression ||
+          expr.Kind == SyntaxKind.GreaterThanExpression || expr.Kind == SyntaxKind.GreaterThanOrEqualExpression)
       {
         var b = (BinaryExpressionSyntax)expr;
         return b.Left is InvocationExpressionSyntax && (SimpleMethodName((InvocationExpressionSyntax)b.Left).Equals("Compare"))
@@ -609,17 +611,6 @@ namespace RoslynContractCounter
     public static bool IsInvalidContract(ExpressionSyntax expr)
     {
       return expr.Kind == SyntaxKind.FalseLiteralExpression;
-    }
-
-    public override void DefaultVisit(SyntaxNode node)
-    {
-      base.DefaultVisit(node);
-    }
-
-    public override void VisitMethodDeclaration(MethodDeclarationSyntax node)
-    {
-      // XXX: Why is this needed?
-      base.VisitMethodDeclaration(node);
     }
 
     public override void VisitInvocationExpression(InvocationExpressionSyntax node)
