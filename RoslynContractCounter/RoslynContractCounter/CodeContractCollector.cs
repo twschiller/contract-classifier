@@ -501,19 +501,6 @@ namespace RoslynContractCounter
     }
 
     /// <summary>
-    /// Lifts <paramref name="predicate"/> to work on an expression wrapped in parentheses, i.e.:
-    /// <c>result("(x)") = predicate("x")</c>.
-    /// </summary>
-    public Func<ContractKind, ExpressionSyntax, bool> UnwrapParens(Func<ContractKind, ExpressionSyntax, bool> predicate)
-    {
-      return (kind, expr) =>
-      {
-        if (expr is ParenthesizedExpressionSyntax) return predicate(kind, ((ParenthesizedExpressionSyntax)expr).Expression);
-        else return predicate(kind, expr);
-      };
-    }
-
-    /// <summary>
     /// Returns a predicate that detects <paramref name="predicate"/> in <tt>Enumerable.All</tt> and <tt>Contract.ForAll</tt> methods.
     /// </summary>
     public Func<ContractKind, ExpressionSyntax, bool> CreateEnumerablePredicate(Func<ContractKind, ExpressionSyntax, bool> predicate)
@@ -613,6 +600,18 @@ namespace RoslynContractCounter
       return expr.Kind == SyntaxKind.FalseLiteralExpression;
     }
 
+    private static ExpressionSyntax StripParenthesis(ExpressionSyntax expr)
+    {
+      if (expr is ParenthesizedExpressionSyntax)
+      {
+        return StripParenthesis(((ParenthesizedExpressionSyntax)expr).Expression);
+      }
+      else
+      {
+        return expr;
+      }
+    }
+
     public override void VisitInvocationExpression(InvocationExpressionSyntax node)
     {
       if (node.Expression is MemberAccessExpressionSyntax)
@@ -623,18 +622,18 @@ namespace RoslynContractCounter
         {
           if (ContractType.HasFlag(contractKind) && expr.ToString().StartsWith(KindStrings[contractKind]))
           {
-            var contract = node.ArgumentList.Arguments[0];
+            var contract = StripParenthesis(node.ArgumentList.Arguments[0].Expression);
 
             var topLevelClauses = new List<ExpressionSyntax>();
-            if (contract.Expression.Kind == SyntaxKind.LogicalAndExpression)
+            if (contract.Kind == SyntaxKind.LogicalAndExpression)
             {
-              var andEx = (BinaryExpressionSyntax)contract.Expression;
+              var andEx = (BinaryExpressionSyntax)contract;
               topLevelClauses.Add(andEx.Left);
               topLevelClauses.Add(andEx.Right);
             }
             else
             {
-              topLevelClauses.Add(contract.Expression);
+              topLevelClauses.Add(contract);
             }
 
             foreach (var clause in topLevelClauses)
@@ -644,15 +643,15 @@ namespace RoslynContractCounter
               ContractTags tags = new ContractTags(contractKind, clause.ToString());
               foreach (var category in Categories)
               {
-                var normalizedRule = UnwrapParens(category.Rule);
+                var normalized = StripParenthesis(clause);
 
-                if (normalizedRule(ContractType, clause))
+                if (category.Rule(ContractType, normalized))
                 {
                   tags.Labels.Add(category.Name);
 
                   if (CATEGORIES_ARE_MUTEX) break;
                 }
-                else if (CreateEnumerablePredicate(normalizedRule)(ContractType, clause))
+                else if (CreateEnumerablePredicate(category.Rule)(ContractType, normalized))
                 {
                   tags.Labels.Add(category.Name);
 

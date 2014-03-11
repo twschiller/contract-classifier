@@ -4,6 +4,7 @@ using System.Linq;
 using Roslyn.Compilers.CSharp;
 using System.IO;
 using log4net;
+using System.Text.RegularExpressions;
 
 namespace RoslynContractCounter
 {
@@ -36,6 +37,13 @@ namespace RoslynContractCounter
       {
         ProcessDirectory(subdirectory, processFile);
       }
+    }
+
+    private static string CategoryLogName(Category category)
+    {
+      // https://stackoverflow.com/questions/5680730/c-sharp-remove-special-characters
+      var clean = Regex.Replace(category.Name, "[^a-zA-Z0-9% ._]", "_");
+      return clean + ".txt";
     }
 
     public struct SubjectProgram
@@ -72,6 +80,16 @@ namespace RoslynContractCounter
 
       var categories = Categories.SemanticCategories;
       
+      // Delete the old category log files
+      foreach (var cat in categories)
+      {
+         var path = Path.Combine(outputDirectory, CategoryLogName(cat));
+         if (File.Exists(path))
+         {
+           File.Delete(path);
+         }
+      }
+
       // Aggregate statistic counters
       var agg = new Dictionary<string, int>();
       var reqCnt = 0;
@@ -127,6 +145,15 @@ namespace RoslynContractCounter
                 agg[cat.Name] = agg[cat.Name] + ens.Labels.Count(t => t.Labels.Contains(cat.Name));
 
                 projRow.Add(all.Labels.Count(t => t.Labels.Contains(cat.Name)).ToString());
+
+                // Dump all the contracts for the category
+                using (var log = File.AppendText(Path.Combine(outputDirectory, CategoryLogName(cat))))
+                {
+                  foreach(var clause in all.Labels.Where(t => t.Labels.Contains(cat.Name)))
+                  {
+                     log.WriteLine(clause.ContractText);
+                  }
+                }
               }
 
               csv.Write("Other" + ",");

@@ -176,6 +176,20 @@ namespace ContractCounterTests
     }
 
     [TestMethod]
+    public void Parenthesis_two_clause_tests()
+    {
+      var root = Syntax.ParseExpression("Contract.Requires((x != null && (y != null)));");
+      var req = new CodeContractCollector(ContractKind.Requires, Categories.SemanticCategories);
+
+      req.Visit(root);
+
+      Assert.AreEqual(2, req.Labels.Count(), "Expected categorization for both clauses");
+
+      Assert.AreEqual(1, req.Labels[0].Labels.Count(), "Expected first clause to have a single label");
+      Assert.AreEqual(1, req.Labels[1].Labels.Count(), "Expected second clause to have a single label");
+    }
+
+    [TestMethod]
     public void Non_empty_tests()
     {
       CheckContract("Contract.Requires(collection.Any());", ContractKind.Requires, Categories.NonEmpty);
