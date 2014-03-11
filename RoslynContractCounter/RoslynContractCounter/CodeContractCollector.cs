@@ -600,6 +600,24 @@ namespace RoslynContractCounter
       return expr.Kind == SyntaxKind.FalseLiteralExpression;
     }
 
+    public static IEnumerable<ExpressionSyntax> TopLevelClauses(ExpressionSyntax expr)
+    {
+      var normalized = StripParenthesis(expr);
+
+      var result = new List<ExpressionSyntax>();
+      if (normalized.Kind == SyntaxKind.LogicalAndExpression)
+      {
+        var andEx = (BinaryExpressionSyntax)normalized;
+        result.AddRange(TopLevelClauses(StripParenthesis(andEx.Left)));
+        result.AddRange(TopLevelClauses(StripParenthesis(andEx.Right)));
+      }
+      else
+      {
+        result.Add(normalized);
+      }
+      return result;
+    }
+
     private static ExpressionSyntax StripParenthesis(ExpressionSyntax expr)
     {
       if (expr is ParenthesizedExpressionSyntax)
@@ -623,19 +641,8 @@ namespace RoslynContractCounter
           if (ContractType.HasFlag(contractKind) && expr.ToString().StartsWith(KindStrings[contractKind]))
           {
             var contract = StripParenthesis(node.ArgumentList.Arguments[0].Expression);
-
-            var topLevelClauses = new List<ExpressionSyntax>();
-            if (contract.Kind == SyntaxKind.LogicalAndExpression)
-            {
-              var andEx = (BinaryExpressionSyntax)contract;
-              topLevelClauses.Add(andEx.Left);
-              topLevelClauses.Add(andEx.Right);
-            }
-            else
-            {
-              topLevelClauses.Add(contract);
-            }
-
+            var topLevelClauses = TopLevelClauses(contract);
+           
             foreach (var clause in topLevelClauses)
             {
               if (IsInvalidContract(clause)) continue;

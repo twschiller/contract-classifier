@@ -190,6 +190,17 @@ namespace ContractCounterTests
     }
 
     [TestMethod]
+    public void Three_clause_tests()
+    {
+      var root = Syntax.ParseExpression("Contract.Requires(x != null && (y != null && (z != null)));");
+      var req = new CodeContractCollector(ContractKind.Requires, Categories.SemanticCategories);
+
+      req.Visit(root);
+
+      Assert.AreEqual(3, req.Labels.Count(), "Expected categorization for all three clauses");
+    }
+
+    [TestMethod]
     public void Non_empty_tests()
     {
       CheckContract("Contract.Requires(collection.Any());", ContractKind.Requires, Categories.NonEmpty);
