@@ -35,7 +35,7 @@ namespace ContractCounterTests
 
       req.Visit(root);
 
-      Assert.IsTrue(req.Labels.Count == 1);
+      Assert.IsTrue(req.Labels.Count == 1, "Expected a single contract clause for contract {0}", contract);
       Assert.IsFalse(
         req.Labels[0].Labels.Any(),
         string.Format("Contract '{0}' miscategorized. Label(s): {1}", 
@@ -249,11 +249,15 @@ namespace ContractCounterTests
       CheckContract("Contract.Requires(x.Compare(y) <= 0);", ContractKind.Requires, Categories.ExpressionComparison);
       CheckContract("Contract.Requires(x.Compare(y) > 0);", ContractKind.Requires, Categories.ExpressionComparison);
       CheckContract("Contract.Requires(x.Compare(y) >= 0);", ContractKind.Requires, Categories.ExpressionComparison);
+
+      CheckContract("Contract.Ensures(Contract.Result<IPersistentObject>().GetType() == po.GetType());", ContractKind.Ensures, Categories.ExpressionComparison);
+      CheckContract("Contract.Ensures(Contract.Result<decimal[,]>().GetLength(0) == matrix.GetLength(0));", ContractKind.Ensures, Categories.ExpressionComparison);
     }
 
     [TestMethod]
     public void Other_categories_tests()
     {
+     
       CheckContractIsOther("Contract.Requires(x.CustomFunctionCall(y));", ContractKind.Requires);
       CheckContractIsOther("Contract.Requires(MyClass.CustomFunctionCall(x,y));", ContractKind.Requires);
       

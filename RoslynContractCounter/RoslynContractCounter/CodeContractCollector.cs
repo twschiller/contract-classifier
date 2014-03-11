@@ -564,8 +564,8 @@ namespace RoslynContractCounter
         {
           var ie = (InvocationExpressionSyntax)b.Left;
 
-          var rule = new Regex("Contract.Result<.*?>");
-          return rule.IsMatch(ie.Expression.ToString());
+          var rule = new Regex("^Contract.Result<.*?>()$");
+          return rule.IsMatch(ie.Expression.ToString().Trim());
         }
         else
         {
