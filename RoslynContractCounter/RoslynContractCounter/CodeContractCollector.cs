@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace RoslynContractCounter
@@ -545,7 +546,7 @@ namespace RoslynContractCounter
       };
     }
 
-    public static bool IsBoolResult(ExpressionSyntax expr)
+    public static bool IsResultDefinition(ExpressionSyntax expr)
     {
       if (expr is BinaryExpressionSyntax && expr.Kind == SyntaxKind.EqualsExpression)
       {
@@ -554,7 +555,9 @@ namespace RoslynContractCounter
         if (b.Left is InvocationExpressionSyntax)
         {
           var ie = (InvocationExpressionSyntax)b.Left;
-          return ie.Expression.ToString() == "Contract.Result<bool>" || ie.Expression.ToString() == "Contract.Result<int>";
+
+          var rule = new Regex("Contract.Result<.*?>");
+          return rule.IsMatch(ie.Expression.ToString());
         }
         else
         {
@@ -580,7 +583,15 @@ namespace RoslynContractCounter
       else if (expr is BinaryExpressionSyntax && expr.Kind == SyntaxKind.EqualsExpression)
       {
         var b = (BinaryExpressionSyntax)expr;
-        return b.Right is LiteralExpressionSyntax || b.Left is LiteralExpressionSyntax;
+
+        Func<ExpressionSyntax, ExpressionSyntax, bool> chk = (lhs, rhs) =>
+        {
+          var simpleExpr = !(lhs is BinaryExpressionSyntax || lhs is PrefixUnaryExpressionSyntax || lhs is PostfixUnaryExpressionSyntax);
+          var otherLiteral = rhs is LiteralExpressionSyntax;
+          return simpleExpr && otherLiteral;
+        };
+
+        return chk(b.Left, b.Right) || chk(b.Right, b.Left);
       }
       else
       {

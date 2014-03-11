@@ -55,6 +55,7 @@ namespace ContractCounterTests
     public void Return_value_tests()
     {
       CheckContract("Contract.Ensures(Contract.Result<bool>() == x > 5);", ContractKind.Ensures, Categories.ReturnValue);
+      CheckContract("Contract.Ensures(Contract.Result<Lab>() == null);", ContractKind.Ensures, Categories.ReturnValue);
     }
  
     [TestMethod]
@@ -69,6 +70,9 @@ namespace ContractCounterTests
       // Setters
       CheckContract("Contract.Ensures(this.Property == arg);", ContractKind.Ensures, Categories.GetterOrSetter);
       CheckContract("Contract.Ensures(Property == arg);", ContractKind.Ensures, Categories.GetterOrSetter);
+
+      // Checking that a value is null is considered a constant value for POSTCONDITIONS
+      CheckContract("Contract.Ensures(typedIdent.WhereExpr == null);", ContractKind.Ensures, Categories.Constant);    
     }
 
     [TestMethod]
@@ -254,7 +258,9 @@ namespace ContractCounterTests
       CheckContractIsOther("Contract.Requires(MyClass.CustomFunctionCall(x,y));", ContractKind.Requires);
       
       // Closures are considered to be "other" contracts
-      CheckContractIsOther("Contract.Requires(Contract.Forall(xs, x => { return CustomMethod(x) ;} );", ContractKind.Requires); 
+      CheckContractIsOther("Contract.Requires(Contract.Forall(xs, x => { return CustomMethod(x) ;} );", ContractKind.Requires);
+
+      CheckContractIsOther("Contract.Requires(offset % PAGESIZE == 0);", ContractKind.Requires);
     }
 
     [TestMethod]
@@ -278,6 +284,10 @@ namespace ContractCounterTests
     {
       CheckContract("Contract.Requires(this.Field == 5);", ContractKind.Requires, Categories.Constant);
       CheckContract("Contract.Requires(this.Field == \"Hello World\");", ContractKind.Requires, Categories.Constant);
+      CheckContract("Contract.Requires(System.Threading.Thread.CurrentThread.ManagedThreadId == 1);", ContractKind.Requires, Categories.Constant);
+
+      // Checking that a value is null is considered a constant value for PRECONDITIONS
+      CheckContract("Contract.Requires(typedIdent.WhereExpr == null);", ContractKind.Requires, Categories.Constant);    
     }
 
     [TestMethod]

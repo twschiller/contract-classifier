@@ -78,7 +78,7 @@ namespace RoslynContractCounter
     public static readonly Category LowerOrUpperBound = new Category("Lower/Upper Bound", c => CodeContractCollector.IsBoundedCheck(c) && !CodeContractCollector.IsSizeCheck(c));
     public static readonly Category Indicator = new Category("Indicator", CodeContractCollector.IsIndicator);
     public static readonly Category FrameCondition = new Category("Frame Condition", CodeContractCollector.IsFrameCondition);
-    public static readonly Category ReturnValue = new Category("Return Value", c => CodeContractCollector.IsBoolResult(c) && !CodeContractCollector.IsGetterSetter(c));
+    public static readonly Category ReturnValue = new Category("Return Value", c => CodeContractCollector.IsResultDefinition(c) && !CodeContractCollector.IsGetterSetter(c));
     public static readonly Category BoundsCheck = new Category("Bounds Check", CodeContractCollector.IsBoundsCheck);
     public static readonly Category Constant = new Category("Constant", c => CodeContractCollector.IsConstantCheck(c) && !CodeContractCollector.IsSizeCheck(c));
     public static readonly Category Implication = new Category("Implication", c => CodeContractCollector.IsImplication(c));
