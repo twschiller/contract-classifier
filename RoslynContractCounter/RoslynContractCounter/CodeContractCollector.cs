@@ -132,8 +132,16 @@ namespace RoslynContractCounter
 
       if (expr is BinaryExpressionSyntax && expr.Kind == SyntaxKind.EqualsExpression)
       {
+        Func<ExpressionSyntax, ExpressionSyntax, bool> result = (lhs, rhs) =>
+        {
+          var lhsOk = chk(lhs);
+          var rhsOk = rhs is IdentifierNameSyntax || rhs is MemberAccessExpressionSyntax || rhs is LiteralExpressionSyntax;
+          var constantReturn = IsContractResult(lhs) && rhs is LiteralExpressionSyntax;
+          return lhsOk && rhsOk && !constantReturn;
+        };
+
         var b = (BinaryExpressionSyntax)expr;
-        return chk(b.Left) && chk(b.Right);
+        return result(b.Left, b.Right) || result(b.Right, b.Left);
       }
       else if (expr is InvocationExpressionSyntax)
       {
@@ -572,11 +580,8 @@ namespace RoslynContractCounter
 
     public static bool IsConstantCheck(ExpressionSyntax expr)
     {
-      if (expr is InvocationExpressionSyntax)
-      {
-        return ((InvocationExpressionSyntax)expr).Expression.ToString().Equals("Contract.Result<bool>");
-      }
-      else if (expr is PrefixUnaryExpressionSyntax && expr.Kind == SyntaxKind.LogicalNotExpression)
+   
+      if (expr is PrefixUnaryExpressionSyntax && expr.Kind == SyntaxKind.LogicalNotExpression)
       {
         return IsConstantCheck(((PrefixUnaryExpressionSyntax)expr).Operand);
       }
@@ -586,7 +591,7 @@ namespace RoslynContractCounter
 
         Func<ExpressionSyntax, ExpressionSyntax, bool> chk = (lhs, rhs) =>
         {
-          var simpleExpr = !(lhs is BinaryExpressionSyntax || lhs is PrefixUnaryExpressionSyntax || lhs is PostfixUnaryExpressionSyntax);
+          var simpleExpr = lhs is IdentifierNameSyntax || lhs is MemberAccessExpressionSyntax;
           var otherLiteral = rhs is LiteralExpressionSyntax;
           return simpleExpr && otherLiteral;
         };

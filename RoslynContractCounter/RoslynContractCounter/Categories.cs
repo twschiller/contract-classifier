@@ -101,9 +101,9 @@ namespace RoslynContractCounter
       FrameCondition,
       ReturnValue,
       BoundsCheck,
+      GetterOrSetter,
       Constant,
       Implication,
-      GetterOrSetter,
       Membership,
       ExpressionComparison,
     };

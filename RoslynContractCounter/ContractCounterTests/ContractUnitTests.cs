@@ -15,13 +15,13 @@ namespace ContractCounterTests
     public void CheckContract(string contract, ContractKind kind, Category expected)
     {
       var root = Syntax.ParseExpression(contract);
-      var req = new CodeContractCollector(kind, Categories.SemanticCategories);
+      var collector = new CodeContractCollector(kind, Categories.SemanticCategories);
 
-      req.Visit(root);
+      collector.Visit(root);
 
-      Assert.AreEqual(1, req.Labels.Count, "Expected a single top-level contract clause");
+      Assert.AreEqual(1, collector.Labels.Count, "Expected a single top-level contract clause");
       
-      var labels = req.Labels[0].Labels.ToList();
+      var labels = collector.Labels[0].Labels.ToList();
 
       Assert.IsTrue(labels.Count > 0, string.Format("Contract {0} not labeled", contract));
       Assert.AreEqual(1, labels.Count, "Expected a single label for the contract");
@@ -72,7 +72,7 @@ namespace ContractCounterTests
       CheckContract("Contract.Ensures(Property == arg);", ContractKind.Ensures, Categories.GetterOrSetter);
 
       // Checking that a value is null is considered a constant value for POSTCONDITIONS
-      CheckContract("Contract.Ensures(typedIdent.WhereExpr == null);", ContractKind.Ensures, Categories.Constant);    
+      CheckContract("Contract.Ensures(typedIdent.WhereExpr == null);", ContractKind.Ensures, Categories.GetterOrSetter);    
     }
 
     [TestMethod]
@@ -258,9 +258,12 @@ namespace ContractCounterTests
       CheckContractIsOther("Contract.Requires(MyClass.CustomFunctionCall(x,y));", ContractKind.Requires);
       
       // Closures are considered to be "other" contracts
-      CheckContractIsOther("Contract.Requires(Contract.Forall(xs, x => { return CustomMethod(x) ;} );", ContractKind.Requires);
+      CheckContractIsOther("Contract.Requires(Contract.ForAll(xs, x => { return CustomMethod(x) ;} );", ContractKind.Requires);
 
       CheckContractIsOther("Contract.Requires(offset % PAGESIZE == 0);", ContractKind.Requires);
+      CheckContractIsOther("Contract.Requires((blockSize % 8) == 0);", ContractKind.Requires);
+      CheckContractIsOther("Contract.Requires((view as IEnumerable<T>).Count(predicate) == 1);", ContractKind.Requires);
+      CheckContractIsOther("Contract.Requires(userAccount.ToCharArray().Where(c => c == '\\').Count() == 1);", ContractKind.Requires);
     }
 
     [TestMethod]
