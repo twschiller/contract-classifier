@@ -130,7 +130,19 @@ namespace ContractCounterTests
     [TestMethod]
     public void Combined_bounds_check()
     {
-      CheckContract("Contract.Requires(idx >= 0 && idx < list.Count);", ContractKind.Requires, Categories.BoundsCheck);
+      // This test fails because the categorization is considering each top-level clause separately
+      var root = Syntax.ParseExpression("Contract.Requires(idx >= 0 && idx < array.Length);");
+      var req = new CodeContractCollector(ContractKind.Requires, Categories.SemanticCategories);
+
+      req.Visit(root);
+
+      Assert.AreEqual(2, req.Labels.Count(), "Expected categorization for both clauses");
+
+      Assert.AreEqual(1, req.Labels[0].Labels.Count(), "Expected first clause to have a single label");
+      Assert.AreEqual(1, req.Labels[1].Labels.Count(), "Expected second clause to have a single label");
+
+      Assert.AreEqual(Categories.BoundsCheck.Name, req.Labels[0].Labels.First());
+      Assert.AreEqual(Categories.BoundsCheck.Name, req.Labels[1].Labels.First());
     }
 
     [TestMethod]
