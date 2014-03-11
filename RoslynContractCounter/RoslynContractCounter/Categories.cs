@@ -85,6 +85,7 @@ namespace RoslynContractCounter
     public static readonly Category GetterOrSetter = new Category("Getter/Setter", (k, c) => k.HasFlag(ContractKind.Ensures) && CodeContractCollector.IsGetterSetter(c));
     public static readonly Category Membership = new Category("Membership", c => CodeContractCollector.ContainsCheck(c));
     public static readonly Category ExpressionComparison = new Category("Expr. Comparison", c => CodeContractCollector.IsExprComparison(c) || CodeContractCollector.IsComparisonCheck(c));
+    public static readonly Category StateUpdate = new Category("State Update", c => CodeContractCollector.IsStateUpdate(c));
 
     /// <summary>
     /// Categories for the ICSE 2014 paper.
@@ -95,6 +96,7 @@ namespace RoslynContractCounter
       NullOrBlank,
       NonEmpty,
       LowerOrUpperBound,
+      StateUpdate,
       Indicator,
       FrameCondition,
       ReturnValue,

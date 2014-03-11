@@ -58,13 +58,11 @@ namespace RoslynContractCounter
       if (expr is IdentifierNameSyntax)
       {
         // If we just have a lone boolean, consider it to be an indicator variable regardless of the name
-        // var ident = ((IdentifierNameSyntax)expr).ToString();
         return true;
       }
       else if (expr is MemberAccessExpressionSyntax)
       {
         // If we just have a lone boolean, consider it to be an indicator variable regardless of the name
-        // var ident = ((MemberAccessExpressionSyntax)expr).Name.ToString();
         return true;
       }
       else if (expr is InvocationExpressionSyntax)
@@ -97,6 +95,24 @@ namespace RoslynContractCounter
       else if (expr is PrefixUnaryExpressionSyntax && expr.Kind == SyntaxKind.LogicalNotExpression)
       {
         return IsIndicator(((PrefixUnaryExpressionSyntax)expr).Operand);
+      }
+      else if (expr is BinaryExpressionSyntax && (expr.Kind == SyntaxKind.EqualsExpression || expr.Kind == SyntaxKind.NotEqualsExpression))
+      {
+        // Support the Indicator == true case
+        var b = (BinaryExpressionSyntax)expr;
+        
+        Predicate<ExpressionSyntax> IsBoolLiteral = e => {
+          if (e is LiteralExpressionSyntax){
+            return e.ToString() == "true" || e.ToString() == "false";
+          }else{
+            return false;
+          }
+        };
+
+        var lhs = IsIndicator(b.Left) && IsBoolLiteral(b.Right);
+        var rhs = IsIndicator(b.Right) && IsBoolLiteral(b.Left);
+
+        return lhs || rhs;
       }
       else
       {
@@ -171,9 +187,15 @@ namespace RoslynContractCounter
         var containsOld = from e in b.Right.DescendantNodes().OfType<ExpressionSyntax>()
                           where IsOldValue(e, b.Left)
                           select e;
+        var oldMatch = containsOld.ToList();
+        
+        if (IsOldValue(b.Right, b.Left))
+        {
+          oldMatch.Add(b.Right);
+        }
 
         // RHS can be LHS's pre-state as long as it's not an equality.
-        return (!IsOldValue(b.Right, b.Left) || expr.Kind != SyntaxKind.EqualsExpression) && containsOld.Any();
+        return (!IsOldValue(b.Right, b.Left) || expr.Kind != SyntaxKind.EqualsExpression) && oldMatch.Any();
       }
       else
       {
@@ -207,6 +229,16 @@ namespace RoslynContractCounter
         var b = (BinaryExpressionSyntax)expr;
         return !(IsFrameCondition(expr) || IsStateUpdate(expr) || IsImplication(expr)) &&
                !(b.Right is LiteralExpressionSyntax || b.Left is LiteralExpressionSyntax);
+      }
+      else if (expr is InvocationExpressionSyntax)
+      {
+        var m = (InvocationExpressionSyntax)expr;
+
+        if (SimpleMethodName(m) == "Equals" || SimpleMethodName(m) == "ReferenceEquals")
+        {
+          return !(m.Expression is LiteralExpressionSyntax || m.ArgumentList.Arguments[0].Expression is LiteralExpressionSyntax);
+        }
+        return false;
       }
       else
       {

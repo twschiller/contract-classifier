@@ -98,8 +98,15 @@ namespace RoslynContractCounter
 
             ProcessDirectory(subject.Path, path =>
             {
-              if (path.EndsWith(".cs")) VisitFile(path, new[] { req, ens, obj, all });
-              else return;
+              try
+              {
+                if (path.EndsWith(".cs")) VisitFile(path, new[] { req, ens, obj, all });
+                else return;
+              }
+              catch (Exception ex)
+              {
+                Log.Warn("Error processing file " + path, ex);
+              }
             });
 
             using (var csv = File.CreateText(Path.Combine(outputDirectory, subject.Name + ".stats")))
@@ -117,7 +124,7 @@ namespace RoslynContractCounter
                 csv.WriteLine();
 
                 if (!agg.ContainsKey(cat.Name)) agg.Add(cat.Name, 0);
-                agg[cat.Name] = agg[cat.Name] + all.Labels.Count(t => t.Labels.Contains(cat.Name));
+                agg[cat.Name] = agg[cat.Name] + ens.Labels.Count(t => t.Labels.Contains(cat.Name));
 
                 projRow.Add(all.Labels.Count(t => t.Labels.Contains(cat.Name)).ToString());
               }
@@ -135,7 +142,7 @@ namespace RoslynContractCounter
               projRow.Add(all.Labels.Count(t => t.Labels.Count == 0).ToString());
 
               if (!agg.ContainsKey("Other")) agg.Add("Other", 0);
-              agg["Other"] = agg["Other"] + all.Labels.Count(t => t.Labels.Count == 0);
+              agg["Other"] = agg["Other"] + ens.Labels.Count(t => t.Labels.Count == 0);
 
               csvStatsByProject.WriteLine(string.Join(",", projRow));
             }
