@@ -128,7 +128,32 @@ namespace ContractCounterTests
     }
 
     [TestMethod]
-    public void Combined_bounds_check()
+    public void Top_level_enumerable_clauses_tests()
+    {
+      var root = Syntax.ParseExpression("Contract.Requires(Contract.ForAll(xs, x => x >= 0 && x < array.Length));");
+      var req = new CodeContractCollector(ContractKind.Requires, Categories.SemanticCategories);
+
+      req.Visit(root);
+
+      Assert.AreEqual(2, req.Labels.Count(), "Expected categorization for both top-level clauses");
+
+      Assert.AreEqual(1, req.Labels[0].Labels.Count(), "Expected first clause to have a single label");
+      Assert.AreEqual(1, req.Labels[1].Labels.Count(), "Expected second clause to have a single label");
+    }
+
+    [TestMethod]
+    public void Top_level_cojunct_and_enumerable_clauses_tests()
+    {
+      var root = Syntax.ParseExpression("Contract.Requires(y != null && Contract.ForAll(xs, x => x >= 0 && x < array.Length));");
+      var req = new CodeContractCollector(ContractKind.Requires, Categories.SemanticCategories);
+
+      req.Visit(root);
+
+      Assert.AreEqual(3, req.Labels.Count(), "Expected categorization for both top-level clauses");
+    }
+
+    [TestMethod]
+    public void Combined_bounds_check_test()
     {
       // This test fails because the categorization is considering each top-level clause separately
       var root = Syntax.ParseExpression("Contract.Requires(idx >= 0 && idx < array.Length);");

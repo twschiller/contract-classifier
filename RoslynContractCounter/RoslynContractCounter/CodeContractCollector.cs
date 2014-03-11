@@ -600,16 +600,48 @@ namespace RoslynContractCounter
       return expr.Kind == SyntaxKind.FalseLiteralExpression;
     }
 
-    public static IEnumerable<ExpressionSyntax> TopLevelClauses(ExpressionSyntax expr)
+    private static IEnumerable<ExpressionSyntax> TopLevelClauses(ExpressionSyntax expr, bool unrollEnumerables)
     {
       var normalized = StripParenthesis(expr);
 
       var result = new List<ExpressionSyntax>();
+  
+      if (unrollEnumerables && normalized is InvocationExpressionSyntax)
+      {
+        var call = (InvocationExpressionSyntax)expr;
+
+        if (new[] { "Enumerable.All", "Contract.ForAll" }.Any(n => n.Equals(call.Expression.ToString())))
+        {
+          var d = call.ArgumentList.Arguments[1].Expression;
+          if (d is SimpleLambdaExpressionSyntax)
+          {
+            var l = (SimpleLambdaExpressionSyntax)d;
+
+            if (l.Body is ExpressionSyntax)
+            {
+              return TopLevelClauses(((ExpressionSyntax)l.Body), false);
+            }
+            else
+            {
+              // Let this contract be categorized at "Other"
+              result.Add(normalized);
+              return result;
+            }
+          }
+        }
+        else
+        {
+          // Let this contract be categorized at "Other"
+          result.Add(normalized);
+          return result;
+        }
+      }
+
       if (normalized.Kind == SyntaxKind.LogicalAndExpression)
       {
         var andEx = (BinaryExpressionSyntax)normalized;
-        result.AddRange(TopLevelClauses(StripParenthesis(andEx.Left)));
-        result.AddRange(TopLevelClauses(StripParenthesis(andEx.Right)));
+        result.AddRange(TopLevelClauses(StripParenthesis(andEx.Left), unrollEnumerables));
+        result.AddRange(TopLevelClauses(StripParenthesis(andEx.Right), unrollEnumerables));
       }
       else
       {
@@ -641,7 +673,7 @@ namespace RoslynContractCounter
           if (ContractType.HasFlag(contractKind) && expr.ToString().StartsWith(KindStrings[contractKind]))
           {
             var contract = StripParenthesis(node.ArgumentList.Arguments[0].Expression);
-            var topLevelClauses = TopLevelClauses(contract);
+            var topLevelClauses = TopLevelClauses(contract, true);
            
             foreach (var clause in topLevelClauses)
             {
