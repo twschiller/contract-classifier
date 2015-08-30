@@ -1,0 +1,9 @@
+RoslynContractCounter\RoslynContractCounter\bin
+RoslynContractCounter\RoslynContractCounter\obj
+RoslynContractCounter\ContractCounterTests\obj
+RoslynContractCounter\ContractCounterTests\bin
+
+RoslynContractCounter\packages\log4net.2.0.3\lib
+RoslynContractCounter\TestResults
+
+*.csproj.user
